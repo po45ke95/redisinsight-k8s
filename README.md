@@ -1,1 +1,1 @@
-redisinsight-k8s
+for study redisinsight tool for managed redis analizer.
