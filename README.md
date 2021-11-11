@@ -1,0 +1,1 @@
+redisinsight-k8s
