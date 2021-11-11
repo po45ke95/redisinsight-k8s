@@ -1,0 +1,100 @@
+# RedisInsight service with name 'redisinsight-service'
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: default
+  name: redisinsight
+  labels:
+    app: redisinsight
+  annotations:
+    cloud.google.com/backend-config: '{"ports": {"80":"redisinsight-backendconfig"}}'
+spec:
+  selector:
+    app: "redisinsight"
+  type: NodePort
+  ports:
+  - name: redisinsight
+    port: 80
+    targetPort: 8001
+    protocol: TCP
+---
+# RedisInsight deployment with name 'redisinsight'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redisinsight #deployment name
+  labels:
+    app: redisinsight #deployment label
+spec:
+  replicas: 1 #a single replica pod
+  selector:
+    matchLabels:
+      app: redisinsight #which pods is the deployment managing, as defined by the pod template
+  template: #pod template
+    metadata:
+      labels:
+        app: redisinsight #label for pod/s
+    spec:
+      containers:
+      - name:  redisinsight #Container name (DNS_LABEL, unique)
+        image: redislabs/redisinsight:latest #repo/image
+        imagePullPolicy: Always #Always pull image
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 250m
+            memory: 256Mi
+        volumeMounts:
+        - name: db #Pod volumes to mount into the container's filesystem. Cannot be updated.
+          mountPath: /db
+        ports:
+        - containerPort: 8001 #exposed container port and protocol
+          protocol: TCP
+      volumes:
+      - name: db
+        emptyDir: {} # node-ephemeral volume https://kubernetes.io/docs/concepts/storage/volumes/#emptydir
+---
+# redisinsight ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.allow-http: "true"
+    kubernetes.io/ingress.class: gce
+    kubernetes.io/ingress.global-static-ip-name: redisinsight-dev-ip-address
+  namespace: default
+  name: redisinsight
+  labels: 
+    app: redisinsight
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /*
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: redisinsight
+            port: 
+              number: 80
+---
+# redisinsight ip
+apiVersion: compute.cnrm.cloud.google.com/v1beta1
+kind: ComputeAddress
+metadata:
+  name: redisinsight-dev-ip-address
+spec:
+  location: global
+---
+# redisinsight backendconfig
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  namespace: "default"
+  name: redisinsight-backendconfig
+spec:
+  securityPolicy:
+    name: "ap-backend-armor-policy"
+---
