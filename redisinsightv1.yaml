@@ -96,5 +96,5 @@ metadata:
   name: redisinsight-backendconfig
 spec:
   securityPolicy:
-    name: "ap-backend-armor-policy"
+    name: "sstar-dev-backend-armor-policy"
 ---
